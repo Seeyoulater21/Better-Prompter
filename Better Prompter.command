@@ -73,6 +73,8 @@ adopt_or_start_app() {
     PID="$(get_pid_on_port "$PORT")"
     MODE="adopted"
     START_TIME="$(date +%s)"
+    : >"$LOG_FILE"
+    printf "Adopted existing process on port %s with PID %s at %s\n" "$PORT" "$PID" "$(date)" >>"$LOG_FILE"
   fi
 }
 
