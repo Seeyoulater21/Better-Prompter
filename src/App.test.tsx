@@ -4,12 +4,14 @@ import { App } from "./App";
 import { openPrompterOutput, syncPrompterOutput } from "./output/outputWindow";
 
 const outputWindowMock = vi.hoisted(() => ({
-  outputWindow: { closed: false },
+  outputWindow: { addEventListener: vi.fn(), closed: false, removeEventListener: vi.fn() },
   openPrompterOutput: vi.fn(),
   syncPrompterOutput: vi.fn(),
 }));
 
 vi.mock("./output/outputWindow", () => ({
+  DEFAULT_OUTPUT_VIEWPORT: { width: 1024, height: 600 },
+  getOutputViewport: vi.fn(() => ({ width: 1016, height: 600 })),
   openPrompterOutput: outputWindowMock.openPrompterOutput,
   syncPrompterOutput: outputWindowMock.syncPrompterOutput,
 }));
@@ -20,9 +22,12 @@ describe("App", () => {
     vi.useFakeTimers();
     outputWindowMock.openPrompterOutput.mockResolvedValue({
       mode: "manual",
+      viewport: { width: 1016, height: 600 },
       window: outputWindowMock.outputWindow as unknown as Window,
     });
     outputWindowMock.syncPrompterOutput.mockClear();
+    outputWindowMock.outputWindow.addEventListener.mockClear();
+    outputWindowMock.outputWindow.removeEventListener.mockClear();
   });
 
   afterEach(() => {
@@ -121,6 +126,18 @@ describe("App", () => {
     expect(outputHtml).not.toContain("Play");
   });
 
+  it("sizes the Teleprompt View from the opened output viewport", async () => {
+    const { container } = render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    expect(container.querySelector(".teleprompt-surface")).toHaveStyle({
+      aspectRatio: "1016 / 600",
+    });
+  });
+
   it("syncs the output window when project state changes", async () => {
     render(<App />);
 
@@ -188,7 +205,7 @@ describe("App", () => {
 
     expect(syncPrompterOutput).toHaveBeenCalledWith(
       outputWindowMock.outputWindow,
-      expect.stringContaining("translateY(-120px)"),
+      expect.stringContaining("translateY(-100px)"),
     );
   });
 });

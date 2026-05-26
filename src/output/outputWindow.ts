@@ -1,7 +1,18 @@
 type OutputMode = "managed" | "manual";
 
+export type OutputViewport = {
+  width: number;
+  height: number;
+};
+
+export const DEFAULT_OUTPUT_VIEWPORT: OutputViewport = {
+  width: 1024,
+  height: 600,
+};
+
 type OutputResult = {
   mode: OutputMode;
+  viewport: OutputViewport;
   window: Window | null;
 };
 
@@ -21,6 +32,19 @@ type ScreenLike = {
 type WindowWithScreenDetails = Window & {
   getScreenDetails?: () => Promise<ScreenDetails>;
 };
+
+export function getOutputViewport(target: Window | null): OutputViewport {
+  if (!target) return DEFAULT_OUTPUT_VIEWPORT;
+
+  const width = target.innerWidth || target.document.documentElement.clientWidth;
+  const height = target.innerHeight || target.document.documentElement.clientHeight;
+
+  if (width > 0 && height > 0) {
+    return { width, height };
+  }
+
+  return DEFAULT_OUTPUT_VIEWPORT;
+}
 
 const OUTPUT_CSS = `
 html,
@@ -115,7 +139,7 @@ export function syncPrompterOutput(target: Window, html: string) {
 
 function openManualWindow(html: string): OutputResult {
   if (typeof window.open !== "function") {
-    return { mode: "manual", window: null };
+    return { mode: "manual", viewport: DEFAULT_OUTPUT_VIEWPORT, window: null };
   }
 
   const target = window.open("", "better-prompter-output", "popup=yes,width=1024,height=600");
@@ -124,7 +148,7 @@ function openManualWindow(html: string): OutputResult {
     target.focus();
   }
 
-  return { mode: "manual", window: target };
+  return { mode: "manual", viewport: getOutputViewport(target), window: target };
 }
 
 export async function openPrompterOutput(html: string): Promise<OutputResult> {
@@ -143,7 +167,7 @@ export async function openPrompterOutput(html: string): Promise<OutputResult> {
     }
 
     if (typeof window.open !== "function") {
-      return { mode: "manual", window: null };
+      return { mode: "manual", viewport: DEFAULT_OUTPUT_VIEWPORT, window: null };
     }
 
     const target = window.open(
@@ -160,7 +184,7 @@ export async function openPrompterOutput(html: string): Promise<OutputResult> {
     target.focus();
     void target.document.documentElement.requestFullscreen?.().catch(() => undefined);
 
-    return { mode: "managed", window: target };
+    return { mode: "managed", viewport: getOutputViewport(target), window: target };
   } catch {
     return openManualWindow(html);
   }

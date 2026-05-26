@@ -6,12 +6,16 @@ function createOutputWindow() {
     document: {
       close: vi.fn(),
       documentElement: {
+        clientHeight: 0,
+        clientWidth: 0,
         requestFullscreen: vi.fn().mockResolvedValue(undefined),
       },
       open: vi.fn(),
       write: vi.fn(),
     },
     focus: vi.fn(),
+    innerHeight: 600,
+    innerWidth: 1016,
   };
 }
 
@@ -29,6 +33,7 @@ describe("outputWindow", () => {
 
     expect(result.mode).toBe("manual");
     expect(result.window).toBe(opened);
+    expect(result.viewport).toEqual({ width: 1016, height: 600 });
     expect(open).toHaveBeenCalledWith("", "better-prompter-output", expect.stringContaining("width=1024"));
     expect(opened.document.write).toHaveBeenCalledWith(expect.stringContaining("<div>output</div>"));
   });
@@ -38,7 +43,11 @@ describe("outputWindow", () => {
     Object.defineProperty(window, "open", { configurable: true, value: undefined });
 
     try {
-      await expect(openPrompterOutput("<div>output</div>")).resolves.toEqual({ mode: "manual", window: null });
+      await expect(openPrompterOutput("<div>output</div>")).resolves.toEqual({
+        mode: "manual",
+        viewport: { width: 1024, height: 600 },
+        window: null,
+      });
     } finally {
       Object.defineProperty(window, "open", { configurable: true, value: originalOpen });
     }
@@ -60,6 +69,7 @@ describe("outputWindow", () => {
     const result = await openPrompterOutput("<div>managed</div>");
 
     expect(result.mode).toBe("managed");
+    expect(result.viewport).toEqual({ width: 1016, height: 600 });
     expect(window.open).toHaveBeenCalledWith(
       "",
       "better-prompter-output",

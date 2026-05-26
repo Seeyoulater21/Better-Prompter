@@ -24,12 +24,16 @@ import {
   jumpToBlock,
   togglePlayback,
 } from "./domain/playback";
-import { openPrompterOutput, syncPrompterOutput } from "./output/outputWindow";
+import {
+  DEFAULT_OUTPUT_VIEWPORT,
+  getOutputViewport,
+  openPrompterOutput,
+  syncPrompterOutput,
+  type OutputViewport,
+} from "./output/outputWindow";
 import { loadAutosavedProject, saveAutosavedProject } from "./storage/localProjectStore";
 import type { PrompterProject } from "./types";
 
-const OUTPUT_WIDTH = 1280;
-const OUTPUT_HEIGHT = 720;
 const FALLBACK_PREVIEW_SCALE = 1 / 3;
 
 function loadInitialProject(): PrompterProject {
@@ -57,7 +61,9 @@ export function App() {
   const activeClip = getActiveClip(project);
   const lastFrame = useRef<number | null>(null);
   const outputWindowRef = useRef<Window | null>(null);
+  const outputResizeCleanupRef = useRef<(() => void) | null>(null);
   const previewSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const [outputViewport, setOutputViewport] = useState<OutputViewport>(DEFAULT_OUTPUT_VIEWPORT);
   const [previewScale, setPreviewScale] = useState(FALLBACK_PREVIEW_SCALE);
 
   useEffect(() => {
@@ -86,7 +92,7 @@ export function App() {
     const updatePreviewScale = () => {
       const rect = surface.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-      setPreviewScale(Math.min(1, rect.width / OUTPUT_WIDTH, rect.height / OUTPUT_HEIGHT));
+      setPreviewScale(Math.min(1, rect.width / outputViewport.width, rect.height / outputViewport.height));
     };
 
     updatePreviewScale();
@@ -95,6 +101,10 @@ export function App() {
     const observer = new ResizeObserver(updatePreviewScale);
     observer.observe(surface);
     return () => observer.disconnect();
+  }, [outputViewport.height, outputViewport.width]);
+
+  useEffect(() => {
+    return () => outputResizeCleanupRef.current?.();
   }, []);
 
   useEffect(() => {
@@ -150,7 +160,18 @@ export function App() {
 
   async function openOutput() {
     const result = await openPrompterOutput(renderOutputHtml());
+    outputResizeCleanupRef.current?.();
+    outputResizeCleanupRef.current = null;
     outputWindowRef.current = result.window;
+    setOutputViewport(result.viewport);
+
+    if (result.window) {
+      const handleResize = () => {
+        setOutputViewport(getOutputViewport(result.window));
+      };
+      result.window.addEventListener("resize", handleResize);
+      outputResizeCleanupRef.current = () => result.window?.removeEventListener("resize", handleResize);
+    }
   }
 
   useEffect(() => {
@@ -205,7 +226,11 @@ export function App() {
             />
             <section className="panel teleprompt-panel" aria-labelledby="teleprompt-heading">
               <h2 id="teleprompt-heading">Teleprompt View</h2>
-              <div className="teleprompt-surface" ref={previewSurfaceRef}>
+              <div
+                className="teleprompt-surface"
+                ref={previewSurfaceRef}
+                style={{ aspectRatio: `${outputViewport.width} / ${outputViewport.height}` }}
+              >
                 <TeleprompterRenderer
                   activeBlockId={playback.activeBlockId}
                   mode="preview"
