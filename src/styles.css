@@ -130,8 +130,7 @@ button {
 }
 
 .clip-controls select,
-.control-row input,
-.toggle-row input {
+.control-row input {
   color-scheme: dark;
 }
 
@@ -195,8 +194,7 @@ button {
   padding-right: 2px;
 }
 
-.control-row,
-.toggle-row {
+.control-row {
   min-width: 0;
   display: grid;
   gap: 5px;
@@ -204,8 +202,7 @@ button {
   font-size: 12px;
 }
 
-.control-row span,
-.toggle-row span {
+.control-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -229,16 +226,6 @@ button {
   border-radius: 6px;
   background: #0b0b0b;
   padding: 2px;
-}
-
-.toggle-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 8px;
-  border: 1px solid #282828;
-  border-radius: 6px;
-  background: #101010;
 }
 
 .teleprompt-panel {

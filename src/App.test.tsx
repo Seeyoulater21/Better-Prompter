@@ -20,6 +20,7 @@ describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
+    outputWindowMock.openPrompterOutput.mockClear();
     outputWindowMock.openPrompterOutput.mockResolvedValue({
       mode: "manual",
       viewport: { width: 1016, height: 600 },
@@ -44,6 +45,51 @@ describe("App", () => {
     expect(screen.getByLabelText("Select clip")).toBeInTheDocument();
     expect(screen.getByLabelText("Add clip")).toBeInTheDocument();
     expect(screen.getByLabelText("Delete clip")).toBeInTheDocument();
+  });
+
+  it("does not show removed appearance toggles", () => {
+    render(<App />);
+
+    expect(screen.queryByText("Mirror Output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read Line Preview")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read Line Output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Safe Frame Preview")).not.toBeInTheDocument();
+    expect(screen.queryByText("Safe Frame Output")).not.toBeInTheDocument();
+  });
+
+  it("forces removed appearance toggle settings off when loading autosave", async () => {
+    localStorage.setItem(
+      "better-prompter:last-project",
+      JSON.stringify({
+        activeClipId: "clip-1",
+        clips: [{ id: "clip-1", blocks: [{ id: "block-1", text: "legacy toggles" }] }],
+        settings: {
+          backgroundColor: "#000000",
+          fontSizePt: 72,
+          horizontalMarginPercent: 12,
+          lineSpacingPercent: 120,
+          mirrorOutput: true,
+          scrollSpeedPercent: 42,
+          showReadLineOutput: true,
+          showReadLinePreview: true,
+          showSafeFrameOutput: true,
+          showSafeFramePreview: true,
+          textColor: "#ffffff",
+          verticalMarginPercent: 18,
+        },
+        version: 1,
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    const outputHtml = vi.mocked(openPrompterOutput).mock.calls[0]?.[0] ?? "";
+    expect(outputHtml).not.toContain("scaleX(-1)");
+    expect(outputHtml).not.toContain("data-testid=\"read-line\"");
+    expect(outputHtml).not.toContain("data-testid=\"safe-frame\"");
   });
 
   it("uses the spacebar to toggle playback when focus is outside text entry", () => {

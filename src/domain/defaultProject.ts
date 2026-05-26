@@ -8,15 +8,33 @@ export const defaultSettings: PrompterSettings = {
   textColor: "#ffffff",
   backgroundColor: "#000000",
   scrollSpeedPercent: 42,
-  mirrorOutput: true,
-  showReadLinePreview: true,
+  mirrorOutput: false,
+  showReadLinePreview: false,
   showReadLineOutput: false,
-  showSafeFramePreview: true,
+  showSafeFramePreview: false,
   showSafeFrameOutput: false,
 };
 
-export function createDefaultProject(): PrompterProject {
+const removedAppearanceToggleSettings = {
+  mirrorOutput: false,
+  showReadLineOutput: false,
+  showReadLinePreview: false,
+  showSafeFrameOutput: false,
+  showSafeFramePreview: false,
+};
+
+export function disableRemovedAppearanceToggles(project: PrompterProject): PrompterProject {
   return {
+    ...project,
+    settings: {
+      ...project.settings,
+      ...removedAppearanceToggleSettings,
+    },
+  };
+}
+
+export function createDefaultProject(): PrompterProject {
+  return disableRemovedAppearanceToggles({
     version: 1,
     settings: { ...defaultSettings },
     clips: [
@@ -31,5 +49,5 @@ export function createDefaultProject(): PrompterProject {
       },
     ],
     activeClipId: "clip-1",
-  };
+  });
 }

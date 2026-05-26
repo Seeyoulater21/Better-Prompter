@@ -6,7 +6,7 @@ import { BlockEditor } from "./components/BlockEditor";
 import { ClipControls } from "./components/ClipControls";
 import { PlaybackControls } from "./components/PlaybackControls";
 import { TeleprompterRenderer } from "./components/TeleprompterRenderer";
-import { createDefaultProject } from "./domain/defaultProject";
+import { createDefaultProject, disableRemovedAppearanceToggles } from "./domain/defaultProject";
 import {
   addBlockAfter,
   addClip,
@@ -44,7 +44,7 @@ type PreviewFit = {
 };
 
 function loadInitialProject(): PrompterProject {
-  return loadAutosavedProject() ?? createDefaultProject();
+  return disableRemovedAppearanceToggles(loadAutosavedProject() ?? createDefaultProject());
 }
 
 function getActiveClip(project: PrompterProject) {

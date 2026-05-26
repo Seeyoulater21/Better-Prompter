@@ -12,13 +12,6 @@ type NumberSettingKey =
   | "lineSpacingPercent"
   | "scrollSpeedPercent";
 
-type ToggleSettingKey =
-  | "mirrorOutput"
-  | "showReadLinePreview"
-  | "showReadLineOutput"
-  | "showSafeFramePreview"
-  | "showSafeFrameOutput";
-
 const numberControls: Array<{
   key: NumberSettingKey;
   label: string;
@@ -33,21 +26,9 @@ const numberControls: Array<{
   { key: "scrollSpeedPercent", label: "Scroll Speed", min: 0, max: 100, step: 1 },
 ];
 
-const toggleControls: Array<{ key: ToggleSettingKey; label: string }> = [
-  { key: "mirrorOutput", label: "Mirror Output" },
-  { key: "showReadLinePreview", label: "Read Line Preview" },
-  { key: "showReadLineOutput", label: "Read Line Output" },
-  { key: "showSafeFramePreview", label: "Safe Frame Preview" },
-  { key: "showSafeFrameOutput", label: "Safe Frame Output" },
-];
-
 export function AppearancePanel({ settings, onChange }: AppearancePanelProps) {
   const updateNumber = (key: NumberSettingKey, value: string) => {
     onChange({ ...settings, [key]: Number(value) });
-  };
-
-  const updateToggle = (key: ToggleSettingKey, checked: boolean) => {
-    onChange({ ...settings, [key]: checked });
   };
 
   return (
@@ -85,16 +66,6 @@ export function AppearancePanel({ settings, onChange }: AppearancePanelProps) {
             value={settings.backgroundColor}
           />
         </label>
-        {toggleControls.map((control) => (
-          <label className="toggle-row" key={control.key}>
-            <span>{control.label}</span>
-            <input
-              checked={settings[control.key]}
-              onChange={(event) => updateToggle(control.key, event.target.checked)}
-              type="checkbox"
-            />
-          </label>
-        ))}
       </div>
     </section>
   );
