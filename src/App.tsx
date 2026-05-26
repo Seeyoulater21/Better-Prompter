@@ -24,6 +24,7 @@ import {
   jumpToBlock,
   togglePlayback,
 } from "./domain/playback";
+import { fitViewportToBounds } from "./domain/previewLayout";
 import {
   DEFAULT_OUTPUT_VIEWPORT,
   getOutputViewport,
@@ -35,6 +36,12 @@ import { loadAutosavedProject, saveAutosavedProject } from "./storage/localProje
 import type { PrompterProject } from "./types";
 
 const FALLBACK_PREVIEW_SCALE = 1 / 3;
+
+type PreviewFit = {
+  height: number;
+  scale: number;
+  width: number;
+};
 
 function loadInitialProject(): PrompterProject {
   return loadAutosavedProject() ?? createDefaultProject();
@@ -62,9 +69,11 @@ export function App() {
   const lastFrame = useRef<number | null>(null);
   const outputWindowRef = useRef<Window | null>(null);
   const outputResizeCleanupRef = useRef<(() => void) | null>(null);
+  const previewSlotRef = useRef<HTMLDivElement | null>(null);
   const previewSurfaceRef = useRef<HTMLDivElement | null>(null);
   const [outputViewport, setOutputViewport] = useState<OutputViewport>(DEFAULT_OUTPUT_VIEWPORT);
-  const [previewScale, setPreviewScale] = useState(FALLBACK_PREVIEW_SCALE);
+  const [previewFit, setPreviewFit] = useState<PreviewFit | null>(null);
+  const previewScale = previewFit?.scale ?? FALLBACK_PREVIEW_SCALE;
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -86,20 +95,26 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const surface = previewSurfaceRef.current;
-    if (!surface) return;
+    const slot = previewSlotRef.current;
+    if (!slot) return;
 
     const updatePreviewScale = () => {
-      const rect = surface.getBoundingClientRect();
+      const rect = slot.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-      setPreviewScale(Math.min(1, rect.width / outputViewport.width, rect.height / outputViewport.height));
+      setPreviewFit(
+        fitViewportToBounds({
+          availableHeight: rect.height,
+          availableWidth: rect.width,
+          viewport: outputViewport,
+        }),
+      );
     };
 
     updatePreviewScale();
 
     if (!("ResizeObserver" in window)) return;
     const observer = new ResizeObserver(updatePreviewScale);
-    observer.observe(surface);
+    observer.observe(slot);
     return () => observer.disconnect();
   }, [outputViewport.height, outputViewport.width]);
 
@@ -226,18 +241,24 @@ export function App() {
             />
             <section className="panel teleprompt-panel" aria-labelledby="teleprompt-heading">
               <h2 id="teleprompt-heading">Teleprompt View</h2>
-              <div
-                className="teleprompt-surface"
-                ref={previewSurfaceRef}
-                style={{ aspectRatio: `${outputViewport.width} / ${outputViewport.height}` }}
-              >
-                <TeleprompterRenderer
-                  activeBlockId={playback.activeBlockId}
-                  mode="preview"
-                  project={project}
-                  scale={previewScale}
-                  scrollOffsetPx={playback.scrollOffsetPx}
-                />
+              <div className="teleprompt-viewport-slot" ref={previewSlotRef}>
+                <div
+                  className="teleprompt-surface"
+                  ref={previewSurfaceRef}
+                  style={{
+                    aspectRatio: `${outputViewport.width} / ${outputViewport.height}`,
+                    height: previewFit ? `${previewFit.height}px` : undefined,
+                    width: previewFit ? `${previewFit.width}px` : undefined,
+                  }}
+                >
+                  <TeleprompterRenderer
+                    activeBlockId={playback.activeBlockId}
+                    mode="preview"
+                    project={project}
+                    scale={previewScale}
+                    scrollOffsetPx={playback.scrollOffsetPx}
+                  />
+                </div>
               </div>
             </section>
           </div>

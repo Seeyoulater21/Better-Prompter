@@ -162,7 +162,11 @@ describe("App", () => {
       const element = this;
       const blockId = element.dataset.prompterBlockId;
 
-      if (element.classList.contains("teleprompt-surface") || element.classList.contains("prompter-canvas")) {
+      if (
+        element.classList.contains("teleprompt-viewport-slot") ||
+        element.classList.contains("teleprompt-surface") ||
+        element.classList.contains("prompter-canvas")
+      ) {
         return {
           bottom: 360,
           height: 360,
