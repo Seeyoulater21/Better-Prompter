@@ -68,6 +68,13 @@ button {
   letter-spacing: 0;
 }
 
+.topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .workspace-main {
   min-height: 0;
   display: grid;
@@ -133,6 +140,7 @@ button {
 }
 
 .icon-button,
+.output-button,
 .playback-button {
   border: 1px solid #3a3a3a;
   border-radius: 7px;
@@ -156,6 +164,7 @@ button {
 }
 
 .icon-button:hover,
+.output-button:hover,
 .playback-button:hover {
   border-color: #7dd3fc;
 }
@@ -240,33 +249,61 @@ button {
   border-radius: 6px;
 }
 
-.teleprompt-surface p {
+.output-button {
+  height: 32px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.prompter-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.prompter-canvas-output {
+  border-radius: 0;
+}
+
+.prompter-scroll-layer {
+  position: absolute;
+  inset: 0;
+  white-space: pre-wrap;
+  transition: transform 80ms linear;
+}
+
+.prompter-block {
   position: relative;
   z-index: 1;
   margin: 0 0 0.9em;
-  white-space: pre-wrap;
-  opacity: 0.72;
+  font-weight: 750;
 }
 
-.teleprompt-surface p.is-active {
-  opacity: 1;
-}
-
-.read-line {
+.prompter-read-line {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: 48%;
   left: 0;
   right: 0;
   height: 1px;
   background: rgba(125, 211, 252, 0.8);
+  pointer-events: none;
 }
 
-.safe-frame {
+.prompter-safe-frame {
   position: absolute;
   z-index: 2;
   inset: 8%;
   border: 1px solid rgba(244, 244, 244, 0.28);
+  pointer-events: none;
 }
 
 .block-editor {
@@ -382,6 +419,15 @@ button {
     align-items: stretch;
     flex-direction: column;
     padding: 12px;
+  }
+
+  .topbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .output-button {
+    justify-content: center;
   }
 
   .clip-controls select {

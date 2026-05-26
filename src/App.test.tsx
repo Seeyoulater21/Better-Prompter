@@ -1,11 +1,28 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { openPrompterOutput, syncPrompterOutput } from "./output/outputWindow";
+
+const outputWindowMock = vi.hoisted(() => ({
+  outputWindow: { closed: false },
+  openPrompterOutput: vi.fn(),
+  syncPrompterOutput: vi.fn(),
+}));
+
+vi.mock("./output/outputWindow", () => ({
+  openPrompterOutput: outputWindowMock.openPrompterOutput,
+  syncPrompterOutput: outputWindowMock.syncPrompterOutput,
+}));
 
 describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
+    outputWindowMock.openPrompterOutput.mockResolvedValue({
+      mode: "manual",
+      window: outputWindowMock.outputWindow as unknown as Window,
+    });
+    outputWindowMock.syncPrompterOutput.mockClear();
   });
 
   afterEach(() => {
@@ -85,5 +102,39 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByDisplayValue("saved script")).toBeInTheDocument();
+  });
+
+  it("opens a clean prompter output from the shared renderer", async () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText("Block 1"), { target: { value: "output only text" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    const outputHtml = vi.mocked(openPrompterOutput).mock.calls[0]?.[0] ?? "";
+    expect(openPrompterOutput).toHaveBeenCalledOnce();
+    expect(outputHtml).toContain("output only text");
+    expect(outputHtml).toContain("prompter-canvas-output");
+    expect(outputHtml).not.toContain("Text Edit / Blocks");
+    expect(outputHtml).not.toContain("Play");
+  });
+
+  it("syncs the output window when project state changes", async () => {
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+    vi.mocked(syncPrompterOutput).mockClear();
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Block 1"), { target: { value: "updated output text" } });
+    });
+
+    expect(syncPrompterOutput).toHaveBeenCalledWith(
+      outputWindowMock.outputWindow,
+      expect.stringContaining("updated output text"),
+    );
   });
 });
