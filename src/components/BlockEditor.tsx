@@ -81,8 +81,11 @@ export function BlockEditor({
             </div>
             <textarea
               aria-label={`Block ${index + 1}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectBlock(block.id);
+              }}
               onChange={(event) => onUpdateBlockText(block.id, event.target.value)}
-              onFocus={() => onSelectBlock(block.id)}
               onKeyDown={(event) => {
                 if (event.ctrlKey && event.key === "Enter") {
                   event.preventDefault();

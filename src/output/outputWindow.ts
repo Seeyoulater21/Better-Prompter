@@ -68,7 +68,7 @@ body {
 .prompter-read-line {
   position: absolute;
   z-index: 3;
-  top: 48%;
+  top: 50%;
   left: 0;
   right: 0;
   height: 1px;

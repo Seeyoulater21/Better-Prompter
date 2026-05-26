@@ -11,6 +11,7 @@ type TeleprompterRendererProps = {
 };
 
 export function TeleprompterRenderer({
+  activeBlockId,
   mode,
   project,
   scale = 1,
@@ -18,6 +19,7 @@ export function TeleprompterRenderer({
 }: TeleprompterRendererProps) {
   const activeClip = project.clips.find((clip) => clip.id === project.activeClipId) ?? project.clips[0];
   const { settings } = project;
+  const scrollTranslatePx = -scrollOffsetPx * scale;
   const showReadLine = mode === "preview" ? settings.showReadLinePreview : settings.showReadLineOutput;
   const showSafeFrame = mode === "preview" ? settings.showSafeFramePreview : settings.showSafeFrameOutput;
   const mirrorOutput = mode === "output" && settings.mirrorOutput;
@@ -40,12 +42,14 @@ export function TeleprompterRenderer({
         style={{
           paddingBlock: `${settings.verticalMarginPercent}%`,
           paddingInline: `${settings.horizontalMarginPercent}%`,
-          transform: `translateY(-${scrollOffsetPx * scale}px)`,
+          transform: `translateY(${scrollTranslatePx}px)`,
         }}
       >
         {activeClip.blocks.map((block) => (
           <p
             className="prompter-block"
+            data-prompter-block-id={block.id}
+            data-prompter-block-state={block.id === activeBlockId ? "active" : undefined}
             key={block.id}
             style={{
               fontSize: `${settings.fontSizePt * scale}px`,

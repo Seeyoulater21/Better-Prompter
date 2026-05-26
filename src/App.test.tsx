@@ -26,6 +26,7 @@ describe("App", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -135,6 +136,59 @@ describe("App", () => {
     expect(syncPrompterOutput).toHaveBeenCalledWith(
       outputWindowMock.outputWindow,
       expect.stringContaining("updated output text"),
+    );
+  });
+
+  it("clicking a block scrolls output so the block aligns with the read line", async () => {
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function getRect(this: HTMLElement) {
+      const element = this;
+      const blockId = element.dataset.prompterBlockId;
+
+      if (element.classList.contains("teleprompt-surface") || element.classList.contains("prompter-canvas")) {
+        return {
+          bottom: 360,
+          height: 360,
+          left: 0,
+          right: 640,
+          top: 0,
+          width: 640,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+
+      if (blockId === "block-2") {
+        return {
+          bottom: 270,
+          height: 30,
+          left: 0,
+          right: 100,
+          top: 240,
+          width: 100,
+          x: 0,
+          y: 240,
+          toJSON: () => ({}),
+        };
+      }
+
+      return originalGetBoundingClientRect.call(element);
+    });
+
+    render(<App />);
+
+    fireEvent.click(within(screen.getByTestId("block-row-block-1")).getByLabelText("Add block after"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+    vi.mocked(syncPrompterOutput).mockClear();
+
+    fireEvent.click(screen.getByTestId("block-row-block-2"));
+
+    expect(syncPrompterOutput).toHaveBeenCalledWith(
+      outputWindowMock.outputWindow,
+      expect.stringContaining("translateY(-120px)"),
     );
   });
 });

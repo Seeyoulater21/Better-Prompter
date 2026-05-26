@@ -93,6 +93,7 @@ describe("outputWindow", () => {
 
     expect(opened.document.open).toHaveBeenCalled();
     expect(opened.document.write).toHaveBeenCalledWith(expect.stringContaining("<div>updated</div>"));
+    expect(opened.document.write).toHaveBeenCalledWith(expect.stringContaining("top: 50%"));
     expect(opened.document.close).toHaveBeenCalled();
   });
 

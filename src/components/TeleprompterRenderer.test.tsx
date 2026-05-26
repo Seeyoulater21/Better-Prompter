@@ -76,6 +76,14 @@ describe("TeleprompterRenderer", () => {
     expect(screen.getByText("scaled preview")).toHaveStyle({ fontSize: "20px" });
   });
 
+  it("renders negative scroll offsets as valid downward translation", () => {
+    const project = projectWithText("early block");
+
+    render(<TeleprompterRenderer activeBlockId="block-1" mode="preview" project={project} scale={0.25} scrollOffsetPx={-80} />);
+
+    expect(screen.getByTestId("prompter-scroll-layer")).toHaveStyle({ transform: "translateY(20px)" });
+  });
+
   it("does not add active-block-only styling inside the shared renderer", () => {
     const project = projectWithText("first block");
     project.clips[0].blocks.push({ id: "block-2", text: "second block" });
@@ -85,5 +93,13 @@ describe("TeleprompterRenderer", () => {
     expect(screen.getByText("first block")).toHaveClass("prompter-block");
     expect(screen.getByText("first block")).not.toHaveClass("is-active");
     expect(screen.getByText("second block")).not.toHaveClass("is-active");
+  });
+
+  it("adds stable block anchors for scroll alignment", () => {
+    const project = projectWithText("anchored block");
+
+    render(<TeleprompterRenderer activeBlockId="block-1" mode="preview" project={project} />);
+
+    expect(screen.getByText("anchored block")).toHaveAttribute("data-prompter-block-id", "block-1");
   });
 });

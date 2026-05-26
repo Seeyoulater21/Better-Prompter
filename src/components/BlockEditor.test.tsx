@@ -77,6 +77,51 @@ describe("BlockEditor", () => {
     expect(onSelectBlock).toHaveBeenCalledWith("block-2");
   });
 
+  it("selects a textarea block without also bubbling to the row", () => {
+    const onSelectBlock = vi.fn();
+
+    render(
+      <BlockEditor
+        activeBlockId="block-1"
+        clip={clip}
+        onAddBlockAfter={vi.fn()}
+        onDeleteBlock={vi.fn()}
+        onDuplicateBlock={vi.fn()}
+        onSelectBlock={onSelectBlock}
+        onSplitBlock={vi.fn()}
+        onUpdateBlockText={vi.fn()}
+      />,
+    );
+
+    const textarea = screen.getByLabelText("Block 2");
+    fireEvent.click(textarea);
+
+    expect(onSelectBlock).toHaveBeenCalledTimes(1);
+    expect(onSelectBlock).toHaveBeenCalledWith("block-2");
+  });
+
+  it("reselects the active textarea block when clicked", () => {
+    const onSelectBlock = vi.fn();
+
+    render(
+      <BlockEditor
+        activeBlockId="block-1"
+        clip={clip}
+        onAddBlockAfter={vi.fn()}
+        onDeleteBlock={vi.fn()}
+        onDuplicateBlock={vi.fn()}
+        onSelectBlock={onSelectBlock}
+        onSplitBlock={vi.fn()}
+        onUpdateBlockText={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Block 1"));
+
+    expect(onSelectBlock).toHaveBeenCalledTimes(1);
+    expect(onSelectBlock).toHaveBeenCalledWith("block-1");
+  });
+
   it("adds, duplicates, and deletes blocks from row controls", () => {
     const onAddBlockAfter = vi.fn();
     const onDeleteBlock = vi.fn();

@@ -17,7 +17,13 @@ import {
   splitBlockAt,
   updateBlockText,
 } from "./domain/projectActions";
-import { createPlaybackState, getScrollDelta, jumpToBlock, togglePlayback } from "./domain/playback";
+import {
+  createPlaybackState,
+  getBlockScrollOffsetForReadLine,
+  getScrollDelta,
+  jumpToBlock,
+  togglePlayback,
+} from "./domain/playback";
 import { openPrompterOutput, syncPrompterOutput } from "./output/outputWindow";
 import { loadAutosavedProject, saveAutosavedProject } from "./storage/localProjectStore";
 import type { PrompterProject } from "./types";
@@ -121,6 +127,27 @@ export function App() {
     );
   }
 
+  function getReadLineScrollOffset(blockId: string, currentScrollOffsetPx: number) {
+    const surface = previewSurfaceRef.current;
+    const canvas = surface?.querySelector<HTMLElement>("[data-testid='prompter-canvas']");
+    const block = Array.from(surface?.querySelectorAll<HTMLElement>("[data-prompter-block-id]") ?? []).find(
+      (item) => item.dataset.prompterBlockId === blockId,
+    );
+
+    if (!canvas || !block) return 0;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const blockRect = block.getBoundingClientRect();
+
+    return getBlockScrollOffsetForReadLine({
+      blockTopPx: blockRect.top,
+      canvasTopPx: canvasRect.top,
+      currentScrollOffsetPx,
+      readLineTopPx: canvasRect.top + canvasRect.height / 2,
+      scale: previewScale,
+    });
+  }
+
   async function openOutput() {
     const result = await openPrompterOutput(renderOutputHtml());
     outputWindowRef.current = result.window;
@@ -136,6 +163,10 @@ export function App() {
     setPlayback((current) =>
       jumpToBlock(current, nextActiveBlockId ?? getActiveClip(nextProject).blocks[0].id),
     );
+  };
+
+  const selectBlock = (blockId: string) => {
+    setPlayback((current) => jumpToBlock(current, blockId, getReadLineScrollOffset(blockId, current.scrollOffsetPx)));
   };
 
   return (
@@ -203,7 +234,7 @@ export function App() {
               const nextProject = duplicateBlock(project, blockId);
               replaceProject(nextProject, blockId);
             }}
-            onSelectBlock={(blockId) => setPlayback((current) => jumpToBlock(current, blockId))}
+            onSelectBlock={selectBlock}
             onSplitBlock={(blockId, cursorIndex) => {
               const result = splitBlockAt(project, blockId, cursorIndex);
               replaceProject(result.project, result.newBlockId);
