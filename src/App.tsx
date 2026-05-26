@@ -1,4 +1,4 @@
-import { MonitorUp } from "lucide-react";
+import { FileDown, FileUp, MonitorUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppearancePanel } from "./components/AppearancePanel";
@@ -33,6 +33,7 @@ import {
   type OutputViewport,
 } from "./output/outputWindow";
 import { loadAutosavedProject, saveAutosavedProject } from "./storage/localProjectStore";
+import { parseProjectJson, serializeProjectJson } from "./storage/projectFile";
 import type { PrompterProject } from "./types";
 
 const FALLBACK_PREVIEW_SCALE = 1 / 3;
@@ -189,6 +190,25 @@ export function App() {
     }
   }
 
+  function exportProject() {
+    const blob = new Blob([serializeProjectJson(project)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "better-prompter-project.json";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importProject(file: File) {
+    const nextProject = disableRemovedAppearanceToggles(parseProjectJson(await file.text()));
+    setProject(nextProject);
+    setPlayback(createPlaybackState(nextProject));
+  }
+
   useEffect(() => {
     if (!outputWindowRef.current || outputWindowRef.current.closed) return;
     syncPrompterOutput(outputWindowRef.current, renderOutputHtml());
@@ -211,6 +231,24 @@ export function App() {
         <header className="topbar">
           <strong>Better Prompter</strong>
           <div className="topbar-actions">
+            <button className="output-button" onClick={exportProject} type="button">
+              <FileDown aria-hidden="true" size={17} />
+              <span>Export JSON</span>
+            </button>
+            <label className="output-button import-button">
+              <FileUp aria-hidden="true" size={17} />
+              <span>Import JSON</span>
+              <input
+                accept="application/json"
+                aria-label="Import JSON"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  if (file) void importProject(file);
+                  event.currentTarget.value = "";
+                }}
+                type="file"
+              />
+            </label>
             <button className="output-button" onClick={openOutput} type="button">
               <MonitorUp aria-hidden="true" size={17} />
               <span>Open Prompter Output</span>
