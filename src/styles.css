@@ -6,6 +6,7 @@ html,
 body,
 #root {
   min-height: 100%;
+  height: 100%;
   margin: 0;
 }
 
@@ -29,14 +30,14 @@ button {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 20px;
+  place-items: stretch;
+  padding: 12px;
   background: #050505;
 }
 
 .workspace-frame {
-  width: min(100%, 1400px);
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  min-height: calc(100vh - 24px);
   display: grid;
   grid-template-rows: 48px 1fr 76px;
   gap: 12px;
@@ -70,7 +71,7 @@ button {
 .workspace-main {
   min-height: 0;
   display: grid;
-  grid-template-columns: 30% 1fr;
+  grid-template-columns: minmax(340px, 28%) minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -368,7 +369,6 @@ button {
   }
 
   .workspace-frame {
-    aspect-ratio: auto;
     min-height: calc(100vh - 20px);
     grid-template-rows: auto 1fr 68px;
   }
