@@ -95,6 +95,21 @@ Responsibilities:
 - Fall back to a manual output window.
 - Sync output HTML whenever project or playback state changes.
 
+### Technical Validation Spike
+
+Issue #1 uses `spikes/brave-output-validation.html` to validate the Brave and Elgato output path before the full app is built.
+
+The supported architecture must not require `window.getScreenDetails`. The output flow is:
+
+1. On user click, feature-detect `window.getScreenDetails`.
+2. If available and permission is granted, try managed placement with `window.open` using external screen bounds.
+3. If the API is missing, permission is denied, no external screen is found, or fullscreen fails, open a normal Prompter Output window.
+4. The user can drag the normal output window to the Elgato display and enter fullscreen manually.
+
+Managed placement is best-effort. Manual output is part of the supported MVP path, not an error state.
+
+The spike page is a validation harness only. Production implementation still belongs in `src/output/outputWindow.ts`, sharing the teleprompter renderer output and keeping the Prompter Output free of controls.
+
 ## Launcher
 
 File:
@@ -116,3 +131,4 @@ Responsibilities:
 - Script text loss is a core risk, so autosave and JSON export must be verified.
 - Output preview drift is a core risk, so renderer sharing is mandatory.
 - Spacebar must not steal input while typing in a textarea.
+- Brave and Elgato behavior must be manually verified on the target machine. If managed placement fails, the MVP still proceeds through the manual output fallback.

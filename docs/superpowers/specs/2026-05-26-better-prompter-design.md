@@ -50,6 +50,8 @@ When not supported or denied:
 
 The design must not assume automatic Elgato screen placement works 100% in Brave. Manual fallback is part of the MVP.
 
+Issue #1 validates this path with `spikes/brave-output-validation.html`. Until target-device QA proves managed placement reliable, the MVP treats `window.getScreenDetails` as optional and manual output as supported.
+
 Elgato Prompter should be used as an extended display, not as a mirrored display, when separate operator and prompter windows are needed.
 
 ## Layout
