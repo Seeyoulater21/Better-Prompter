@@ -265,6 +265,19 @@ button {
   font-weight: 750;
 }
 
+.import-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.import-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 .prompter-canvas {
   position: relative;
   width: 100%;

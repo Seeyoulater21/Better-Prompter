@@ -12,6 +12,16 @@ It provides a black 16:9 operator workspace, exact live preview, clean fullscree
 - Persistence: local autosave plus JSON import/export
 - Launcher: `Better Prompter.command`
 
+## Usage
+
+Double-click `Better Prompter.command` on macOS to start or adopt the local Vite server, open Brave, view status/logs, restart the app, or quit safely.
+
+The launcher uses port `5173` and writes app logs to `.launcher-logs/app.log`.
+
+Use `Export JSON` to download the current Project File as `better-prompter-project.json`.
+
+Use `Import JSON` to restore a valid Better Prompter Project File and reset playback to the first Block in the imported active Clip.
+
 ## Planning Docs
 
 - [PRD.md](./PRD.md)
@@ -23,4 +33,4 @@ It provides a black 16:9 operator workspace, exact live preview, clean fullscree
 
 ## Current Status
 
-Planning complete. Implementation starts from approved GitHub issues.
+MVP implementation is in progress through approved GitHub issues.

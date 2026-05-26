@@ -33,6 +33,7 @@ describe("App", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -154,6 +155,99 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByDisplayValue("saved script")).toBeInTheDocument();
+  });
+
+  it("exports the current project as JSON", async () => {
+    const exportedBlobs: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlobs.push(blob);
+      return "blob:better-prompter-project";
+    });
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText("Block 1"), { target: { value: "exported script" } });
+    fireEvent.click(screen.getByRole("button", { name: "Export JSON" }));
+
+    expect(click).toHaveBeenCalledOnce();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:better-prompter-project");
+    const exportedBlob = exportedBlobs[0];
+    if (!exportedBlob) throw new Error("Expected export to create a Blob");
+    await expect(exportedBlob.text()).resolves.toContain("exported script");
+  });
+
+  it("imports a valid project JSON and resets playback to the active clip's first block", async () => {
+    render(<App />);
+    const importedProject = {
+      activeClipId: "clip-imported",
+      clips: [
+        { id: "clip-unused", blocks: [{ id: "block-unused", text: "unused script" }] },
+        { id: "clip-imported", blocks: [{ id: "block-imported", text: "imported script" }] },
+      ],
+      settings: {
+        backgroundColor: "#000000",
+        fontSizePt: 72,
+        horizontalMarginPercent: 12,
+        lineSpacingPercent: 120,
+        mirrorOutput: false,
+        scrollSpeedPercent: 42,
+        showReadLineOutput: false,
+        showReadLinePreview: false,
+        showSafeFrameOutput: false,
+        showSafeFramePreview: false,
+        textColor: "#ffffff",
+        verticalMarginPercent: 18,
+      },
+      version: 1,
+    };
+    const file = new File([JSON.stringify(importedProject)], "project.json", { type: "application/json" });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Import JSON"), { target: { files: [file] } });
+    });
+
+    expect(screen.getByDisplayValue("imported script")).toBeInTheDocument();
+    expect(screen.getByTestId("block-row-block-imported")).toHaveClass("is-active");
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+  });
+
+  it("forces removed output toggle values off when importing legacy project JSON", async () => {
+    render(<App />);
+    const importedProject = {
+      activeClipId: "clip-imported",
+      clips: [{ id: "clip-imported", blocks: [{ id: "block-imported", text: "legacy imported script" }] }],
+      settings: {
+        backgroundColor: "#000000",
+        fontSizePt: 72,
+        horizontalMarginPercent: 12,
+        lineSpacingPercent: 120,
+        mirrorOutput: true,
+        scrollSpeedPercent: 42,
+        showReadLineOutput: true,
+        showReadLinePreview: true,
+        showSafeFrameOutput: true,
+        showSafeFramePreview: true,
+        textColor: "#ffffff",
+        verticalMarginPercent: 18,
+      },
+      version: 1,
+    };
+    const file = new File([JSON.stringify(importedProject)], "legacy-project.json", { type: "application/json" });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Import JSON"), { target: { files: [file] } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    const outputHtml = vi.mocked(openPrompterOutput).mock.calls[0]?.[0] ?? "";
+    expect(outputHtml).not.toContain("scaleX(-1)");
+    expect(outputHtml).not.toContain("data-testid=\"read-line\"");
+    expect(outputHtml).not.toContain("data-testid=\"safe-frame\"");
   });
 
   it("opens a clean prompter output from the shared renderer", async () => {
