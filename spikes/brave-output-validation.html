@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Better Prompter Output Validation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: #050505;
+        color: #f4f4f4;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      main {
+        width: min(100%, 1180px);
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+        gap: 16px;
+      }
+
+      .panel {
+        border: 1px solid #303030;
+        border-radius: 8px;
+        background: #141414;
+        padding: 14px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        height: 34px;
+        border: 1px solid #444;
+        border-radius: 6px;
+        background: #202020;
+        color: #f4f4f4;
+        padding: 0 12px;
+        font-weight: 700;
+      }
+
+      button:hover {
+        border-color: #777;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        resize: vertical;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #070707;
+        color: #f4f4f4;
+        padding: 14px;
+        line-height: 1.45;
+      }
+
+      pre {
+        min-height: 230px;
+        max-height: 420px;
+        margin: 0;
+        overflow: auto;
+        white-space: pre-wrap;
+        color: #bfbfbf;
+      }
+
+      .hint {
+        color: #aaa;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 820px) {
+        main {
+          padding: 14px;
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Better Prompter Output Validation</h1>
+      <div class="workspace">
+        <section class="panel">
+          <div class="controls">
+            <button type="button" id="check-api">Check API</button>
+            <button type="button" id="open-managed">Open Managed Output</button>
+            <button type="button" id="open-manual">Open Manual Output</button>
+            <button type="button" id="sync-output">Sync Output</button>
+          </div>
+          <p class="hint">
+            Use Brave on macOS with Elgato Prompter connected as an extended display.
+            Managed output is optional. Manual output must work.
+          </p>
+          <pre id="status" aria-live="polite"></pre>
+        </section>
+
+        <section class="panel">
+          <textarea id="script-text">Better Prompter validation output.
+
+This window should be black with white script text only.
+
+If managed placement fails, drag this output window to Elgato Prompter and enter fullscreen manually.</textarea>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const statusEl = document.querySelector("#status");
+      const textEl = document.querySelector("#script-text");
+      let outputWindow = null;
+
+      function log(message) {
+        const time = new Date().toLocaleTimeString();
+        statusEl.textContent += `[${time}] ${message}\n`;
+      }
+
+      function getScriptText() {
+        return textEl.value || "Better Prompter";
+      }
+
+      function outputDocument(text) {
+        const escaped = text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+
+        return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Better Prompter Output</title>
+<style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#output {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 8vh 12vw;
+  font-size: clamp(42px, 6vw, 96px);
+  font-weight: 760;
+  line-height: 1.2;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+<main id="output">${escaped}</main>
+</body>
+</html>`;
+      }
+
+      function syncOutput() {
+        if (!outputWindow || outputWindow.closed) {
+          log("No output window open.");
+          return false;
+        }
+
+        outputWindow.document.open();
+        outputWindow.document.write(outputDocument(getScriptText()));
+        outputWindow.document.close();
+        return true;
+      }
+
+      async function queryWindowManagementPermission() {
+        if (!navigator.permissions || !navigator.permissions.query) {
+          return "permissions API unavailable";
+        }
+
+        try {
+          const result = await navigator.permissions.query({ name: "window-management" });
+          return result.state;
+        } catch (error) {
+          return `permission query failed: ${error.name || error.message}`;
+        }
+      }
+
+      function openWindow(features) {
+        if (outputWindow && !outputWindow.closed) {
+          outputWindow.close();
+        }
+
+        outputWindow = window.open("", "better-prompter-output", features);
+        if (!outputWindow) {
+          log("Window blocked. Allow popups for this page and retry.");
+          return null;
+        }
+
+        syncOutput();
+        outputWindow.focus();
+        return outputWindow;
+      }
+
+      function screenName(screen, fallback) {
+        return screen.label || `screen ${fallback}`;
+      }
+
+      function chooseExternalScreen(details) {
+        const screens = Array.from(details.screens || []);
+        if (screens.length < 2) return null;
+
+        return (
+          screens.find((screen) => /elgato|prompter/i.test(screen.label || "")) ||
+          screens.find((screen) => screen !== details.currentScreen && screen.isPrimary === false) ||
+          screens.find((screen) => screen !== details.currentScreen) ||
+          screens[1]
+        );
+      }
+
+      async function checkApi() {
+        statusEl.textContent = "";
+        log(`User agent: ${navigator.userAgent}`);
+        log(`getScreenDetails available: ${"getScreenDetails" in window ? "yes" : "no"}`);
+        log(`screen.isExtended: ${"isExtended" in window.screen ? window.screen.isExtended : "unavailable"}`);
+        log(`window-management permission: ${await queryWindowManagementPermission()}`);
+
+        if (!("getScreenDetails" in window)) {
+          log("Result: use manual fallback path.");
+          return;
+        }
+
+        try {
+          const details = await window.getScreenDetails();
+          log(`screens detected: ${details.screens.length}`);
+          details.screens.forEach((screen, index) => {
+            log(
+              `${screenName(screen, index + 1)}: left=${screen.availLeft}, top=${screen.availTop}, width=${screen.availWidth}, height=${screen.availHeight}, primary=${screen.isPrimary}`,
+            );
+          });
+        } catch (error) {
+          log(`getScreenDetails failed: ${error.name || error.message}`);
+          log("Result: use manual fallback path.");
+        }
+      }
+
+      async function openManagedOutput() {
+        if (!("getScreenDetails" in window)) {
+          log("getScreenDetails unavailable. Opening manual output.");
+          openManualOutput();
+          return;
+        }
+
+        try {
+          const details = await window.getScreenDetails();
+          const target = chooseExternalScreen(details);
+          if (!target) {
+            log("No external screen detected. Opening manual output.");
+            openManualOutput();
+            return;
+          }
+
+          log(`Opening managed output on ${screenName(target, 2)}.`);
+          const features = [
+            "popup=yes",
+            `left=${target.availLeft}`,
+            `top=${target.availTop}`,
+            `width=${target.availWidth}`,
+            `height=${target.availHeight}`,
+          ].join(",");
+          const opened = openWindow(features);
+          if (!opened) return;
+
+          try {
+            await opened.document.documentElement.requestFullscreen();
+            log("Fullscreen request succeeded.");
+          } catch (error) {
+            log(`Fullscreen request failed: ${error.name || error.message}`);
+            log("Manual fullscreen may still be required.");
+          }
+        } catch (error) {
+          log(`Managed output failed: ${error.name || error.message}`);
+          log("Opening manual output.");
+          openManualOutput();
+        }
+      }
+
+      function openManualOutput() {
+        log("Opening manual output window.");
+        openWindow("popup=yes,width=1024,height=600");
+      }
+
+      document.querySelector("#check-api").addEventListener("click", checkApi);
+      document.querySelector("#open-managed").addEventListener("click", openManagedOutput);
+      document.querySelector("#open-manual").addEventListener("click", openManualOutput);
+      document.querySelector("#sync-output").addEventListener("click", () => {
+        if (syncOutput()) log("Output synced.");
+      });
+
+      log("Ready. Click Check API to request screen details.");
+      log(`getScreenDetails available: ${"getScreenDetails" in window ? "yes" : "no"}`);
+    </script>
+  </body>
+</html>
