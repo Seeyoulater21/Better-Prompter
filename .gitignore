@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.launcher-logs/
+.superpowers/
+.DS_Store
