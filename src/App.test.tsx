@@ -1,14 +1,38 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { openPrompterOutput, syncPrompterOutput } from "./output/outputWindow";
+
+const outputWindowMock = vi.hoisted(() => ({
+  outputWindow: { addEventListener: vi.fn(), closed: false, removeEventListener: vi.fn() },
+  openPrompterOutput: vi.fn(),
+  syncPrompterOutput: vi.fn(),
+}));
+
+vi.mock("./output/outputWindow", () => ({
+  DEFAULT_OUTPUT_VIEWPORT: { width: 1024, height: 600 },
+  getOutputViewport: vi.fn(() => ({ width: 1016, height: 600 })),
+  openPrompterOutput: outputWindowMock.openPrompterOutput,
+  syncPrompterOutput: outputWindowMock.syncPrompterOutput,
+}));
 
 describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
+    outputWindowMock.openPrompterOutput.mockClear();
+    outputWindowMock.openPrompterOutput.mockResolvedValue({
+      mode: "manual",
+      viewport: { width: 1016, height: 600 },
+      window: outputWindowMock.outputWindow as unknown as Window,
+    });
+    outputWindowMock.syncPrompterOutput.mockClear();
+    outputWindowMock.outputWindow.addEventListener.mockClear();
+    outputWindowMock.outputWindow.removeEventListener.mockClear();
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -21,6 +45,51 @@ describe("App", () => {
     expect(screen.getByLabelText("Select clip")).toBeInTheDocument();
     expect(screen.getByLabelText("Add clip")).toBeInTheDocument();
     expect(screen.getByLabelText("Delete clip")).toBeInTheDocument();
+  });
+
+  it("does not show removed appearance toggles", () => {
+    render(<App />);
+
+    expect(screen.queryByText("Mirror Output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read Line Preview")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read Line Output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Safe Frame Preview")).not.toBeInTheDocument();
+    expect(screen.queryByText("Safe Frame Output")).not.toBeInTheDocument();
+  });
+
+  it("forces removed appearance toggle settings off when loading autosave", async () => {
+    localStorage.setItem(
+      "better-prompter:last-project",
+      JSON.stringify({
+        activeClipId: "clip-1",
+        clips: [{ id: "clip-1", blocks: [{ id: "block-1", text: "legacy toggles" }] }],
+        settings: {
+          backgroundColor: "#000000",
+          fontSizePt: 72,
+          horizontalMarginPercent: 12,
+          lineSpacingPercent: 120,
+          mirrorOutput: true,
+          scrollSpeedPercent: 42,
+          showReadLineOutput: true,
+          showReadLinePreview: true,
+          showSafeFrameOutput: true,
+          showSafeFramePreview: true,
+          textColor: "#ffffff",
+          verticalMarginPercent: 18,
+        },
+        version: 1,
+      }),
+    );
+
+    render(<App />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    const outputHtml = vi.mocked(openPrompterOutput).mock.calls[0]?.[0] ?? "";
+    expect(outputHtml).not.toContain("scaleX(-1)");
+    expect(outputHtml).not.toContain("data-testid=\"read-line\"");
+    expect(outputHtml).not.toContain("data-testid=\"safe-frame\"");
   });
 
   it("uses the spacebar to toggle playback when focus is outside text entry", () => {
@@ -85,5 +154,108 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByDisplayValue("saved script")).toBeInTheDocument();
+  });
+
+  it("opens a clean prompter output from the shared renderer", async () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText("Block 1"), { target: { value: "output only text" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    const outputHtml = vi.mocked(openPrompterOutput).mock.calls[0]?.[0] ?? "";
+    expect(openPrompterOutput).toHaveBeenCalledOnce();
+    expect(outputHtml).toContain("output only text");
+    expect(outputHtml).toContain("prompter-canvas-output");
+    expect(outputHtml).not.toContain("Text Edit / Blocks");
+    expect(outputHtml).not.toContain("Play");
+  });
+
+  it("sizes the Teleprompt View from the opened output viewport", async () => {
+    const { container } = render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+
+    expect(container.querySelector(".teleprompt-surface")).toHaveStyle({
+      aspectRatio: "1016 / 600",
+    });
+  });
+
+  it("syncs the output window when project state changes", async () => {
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+    vi.mocked(syncPrompterOutput).mockClear();
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Block 1"), { target: { value: "updated output text" } });
+    });
+
+    expect(syncPrompterOutput).toHaveBeenCalledWith(
+      outputWindowMock.outputWindow,
+      expect.stringContaining("updated output text"),
+    );
+  });
+
+  it("clicking a block scrolls output so the block aligns with the read line", async () => {
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function getRect(this: HTMLElement) {
+      const element = this;
+      const blockId = element.dataset.prompterBlockId;
+
+      if (
+        element.classList.contains("teleprompt-viewport-slot") ||
+        element.classList.contains("teleprompt-surface") ||
+        element.classList.contains("prompter-canvas")
+      ) {
+        return {
+          bottom: 360,
+          height: 360,
+          left: 0,
+          right: 640,
+          top: 0,
+          width: 640,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+
+      if (blockId === "block-2") {
+        return {
+          bottom: 270,
+          height: 30,
+          left: 0,
+          right: 100,
+          top: 240,
+          width: 100,
+          x: 0,
+          y: 240,
+          toJSON: () => ({}),
+        };
+      }
+
+      return originalGetBoundingClientRect.call(element);
+    });
+
+    render(<App />);
+
+    fireEvent.click(within(screen.getByTestId("block-row-block-1")).getByLabelText("Add block after"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Prompter Output" }));
+    });
+    vi.mocked(syncPrompterOutput).mockClear();
+
+    fireEvent.click(screen.getByTestId("block-row-block-2"));
+
+    expect(syncPrompterOutput).toHaveBeenCalledWith(
+      outputWindowMock.outputWindow,
+      expect.stringContaining("translateY(-100px)"),
+    );
   });
 });

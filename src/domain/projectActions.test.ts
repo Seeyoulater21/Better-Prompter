@@ -34,10 +34,10 @@ describe("project actions", () => {
         textColor: "#ffffff",
         backgroundColor: "#000000",
         scrollSpeedPercent: 42,
-        mirrorOutput: true,
-        showReadLinePreview: true,
+        mirrorOutput: false,
+        showReadLinePreview: false,
         showReadLineOutput: false,
-        showSafeFramePreview: true,
+        showSafeFramePreview: false,
         showSafeFrameOutput: false,
       },
       clips: [

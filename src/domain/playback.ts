@@ -20,10 +20,42 @@ export function togglePlayback(playback: PlaybackState): PlaybackState {
   };
 }
 
-export function jumpToBlock(playback: PlaybackState, blockId: string): PlaybackState {
+type ReadLineScrollInput = {
+  blockTopPx: number;
+  canvasTopPx: number;
+  currentScrollOffsetPx: number;
+  readLineTopPx: number;
+  scale: number;
+};
+
+export function jumpToBlock(playback: PlaybackState, blockId: string, scrollOffsetPx = 0): PlaybackState {
   return {
     ...playback,
     activeBlockId: blockId,
-    scrollOffsetPx: 0,
+    scrollOffsetPx,
   };
+}
+
+export function getBlockScrollOffsetForReadLine({
+  blockTopPx,
+  canvasTopPx,
+  currentScrollOffsetPx,
+  readLineTopPx,
+  scale,
+}: ReadLineScrollInput): number {
+  if (scale <= 0) return 0;
+
+  const visualBlockTopPx = blockTopPx - canvasTopPx;
+  const visualReadLineTopPx = readLineTopPx - canvasTopPx;
+  const unscrolledBlockTopPx = visualBlockTopPx + currentScrollOffsetPx * scale;
+  return (unscrolledBlockTopPx - visualReadLineTopPx) / scale;
+}
+
+export function getScrollDelta(scrollSpeedPercent: number, elapsedMs: number): number {
+  const boundedSpeed = Math.min(100, Math.max(0, scrollSpeedPercent));
+  const minPixelsPerSecond = 12;
+  const maxPixelsPerSecond = 180;
+  const pixelsPerSecond = minPixelsPerSecond + ((maxPixelsPerSecond - minPixelsPerSecond) * boundedSpeed) / 100;
+
+  return (pixelsPerSecond * elapsedMs) / 1000;
 }
