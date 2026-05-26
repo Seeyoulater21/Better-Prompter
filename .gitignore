@@ -2,4 +2,8 @@ node_modules/
 dist/
 .launcher-logs/
 .superpowers/
+.tsbuild/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
 .DS_Store
